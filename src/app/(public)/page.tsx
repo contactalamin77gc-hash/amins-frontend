@@ -45,6 +45,8 @@ export default function HomePage() {
   const ctaSubtitle = content.cta_subtitle || "Contact us to set up your account.";
   const testimonialsTitle = content.testimonials_title || "What Our Clients Say";
   const testimonials = content.testimonials || [];
+  const concernTitle = content.concern_title || "Our Concern";
+  const concerns = content.concerns || [];
 
   return (
     <>
@@ -263,6 +265,48 @@ export default function HomePage() {
           <button className="text-btn px-8 py-3.5 rounded-[10px] border-[1.5px] border-brand text-brand hover:bg-brand-soft transition-colors cursor-pointer">Learn More</button>
         </div>
       </section>
+
+      {/* ═══ OUR CONCERN ═══ */}
+      {concerns.length > 0 && (
+        <section className="bg-brand-ink py-16">
+          <div className="max-w-[1180px] mx-auto px-6">
+            <div className="text-center mb-10">
+              <h2 className="text-section-title text-white mb-3">{concernTitle}</h2>
+              <div className="w-16 h-1 bg-brand mx-auto" />
+            </div>
+            <div className={`grid gap-6 ${concerns.length === 1 ? "grid-cols-1 max-w-[400px] mx-auto" : concerns.length === 2 ? "grid-cols-2 max-w-[700px] mx-auto" : "md:grid-cols-3"}`}>
+              {concerns.map((c: any, i: number) => {
+                const card = (
+                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/10 hover:bg-white/15 transition-all text-center group">
+                    {c.logo ? (
+                      <div className="w-20 h-20 rounded-xl bg-white mx-auto mb-5 p-2 flex items-center justify-center">
+                        <img src={c.logo} alt={c.name} className="max-w-full max-h-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 rounded-xl bg-brand mx-auto mb-5 grid place-items-center text-white font-bold text-2xl">
+                        {c.name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                    <h3 className="text-white font-bold text-lg mb-2">{c.name}</h3>
+                    <p className="text-white/70 text-sm leading-relaxed">{c.description}</p>
+                    {c.link && (
+                      <div className="mt-4 text-brand text-sm font-semibold group-hover:underline">
+                        Visit Website {"→"}
+                      </div>
+                    )}
+                  </div>
+                );
+
+                return c.link ? (
+                  <a key={i} href={c.link} target="_blank" rel="noopener noreferrer">{card}</a>
+                ) : (
+                  <div key={i}>{card}</div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }

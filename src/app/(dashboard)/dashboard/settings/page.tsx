@@ -22,6 +22,7 @@ const GROUPS = [
   { key: "cta", label: "Call to Action" },
   { key: "about", label: "About Page" },
   { key: "contact", label: "Contact Info" },
+  { key: "concern", label: "Our Concern" },
   { key: "footer", label: "Footer" },
 ];
 
@@ -36,6 +37,7 @@ export default function SettingsPage() {
   const [services, setServices] = useState<any[]>([]);
   const [processSteps, setProcessSteps] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [concerns, setConcerns] = useState<any[]>([]);
 
   useEffect(() => {
     api.get("/site-content/admin").then((res) => {
@@ -48,6 +50,9 @@ export default function SettingsPage() {
       const testItem = res.data.find((i: ContentItem) => i.key === "testimonials");
       if (testItem) try { setTestimonials(JSON.parse(testItem.value)); } catch { setTestimonials([]); }
       setLoading(false);
+
+      const concernItem = res.data.find((i: ContentItem) => i.key === "concerns");
+      if (concernItem) try { setConcerns(JSON.parse(concernItem.value)); } catch { setConcerns([]); }
     });
   }, []);
 
@@ -68,6 +73,7 @@ export default function SettingsPage() {
         if (i.key === "services") return { ...i, value: JSON.stringify(services) };
         if (i.key === "process_steps") return { ...i, value: JSON.stringify(processSteps) };
         if (i.key === "testimonials") return { ...i, value: JSON.stringify(testimonials) };
+        if (i.key === "concerns") return { ...i, value: JSON.stringify(concerns) };
         return i;
       });
 
@@ -353,6 +359,107 @@ export default function SettingsPage() {
                   <div className="text-[10px] text-gray-label mt-1">{step.desc || "No description"}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ OUR CONCERN SECTION ═══ */}
+      {activeGroup === "concern" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Our Concern</h2>
+
+          <div>
+            <label className="field-label">Section Title</label>
+            <input className="field-input" value={getVal("concern_title")} onChange={(e) => updateItem("concern_title", e.target.value)} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Concern Companies</label>
+              <button
+                onClick={() => setConcerns([...concerns, { name: "", description: "", logo: "", link: "" }])}
+                className="btn-ghost py-1.5 px-3 text-[12px]"
+              >
+                <Plus size={14} /> Add Concern
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {concerns.map((c, i) => (
+                <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-ink">Concern {i + 1}</span>
+                    <button onClick={() => setConcerns(concerns.filter((_, idx) => idx !== i))} className="text-danger hover:text-danger/70 cursor-pointer">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Company Name *</label>
+                      <input className="field-input text-[13px]" placeholder="e.g. Amin's Trading" value={c.name}
+                        onChange={(e) => { const u = [...concerns]; u[i] = { ...u[i], name: e.target.value }; setConcerns(u); }} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Website Link</label>
+                      <input className="field-input text-[13px]" placeholder="https://example.com" value={c.link}
+                        onChange={(e) => { const u = [...concerns]; u[i] = { ...u[i], link: e.target.value }; setConcerns(u); }} />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Description</label>
+                    <textarea className="field-input text-[13px] min-h-[60px]" placeholder="What does this company do?" value={c.description}
+                      onChange={(e) => { const u = [...concerns]; u[i] = { ...u[i], description: e.target.value }; setConcerns(u); }} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Logo URL</label>
+                    <div className="flex gap-2 items-start">
+                      <input className="field-input text-[13px] flex-1" placeholder="Paste logo URL or upload" value={c.logo}
+                        onChange={(e) => { const u = [...concerns]; u[i] = { ...u[i], logo: e.target.value }; setConcerns(u); }} />
+                      <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          const formData = new FormData();
+                          formData.append("file", e.target.files[0]);
+                          try {
+                            const res = await api.post("/upload/image", formData, { headers: { "Content-Type": "multipart/form-data" } });
+                            const u = [...concerns]; u[i] = { ...u[i], logo: res.data.url }; setConcerns(u);
+                          } catch { alert("Upload failed"); }
+                        }} />
+                        Upload
+                      </label>
+                    </div>
+                    {c.logo && (
+                      <div className="mt-2 w-20 h-20 rounded-lg border border-gray-line overflow-hidden bg-white p-2">
+                        <img src={c.logo} alt="Logo" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div>
+            <label className="field-label">Preview</label>
+            <div className="bg-brand-ink rounded-xl p-6">
+              <div className="text-center text-white font-bold text-lg mb-4">{getVal("concern_title") || "Our Concern"}</div>
+              <div className="grid grid-cols-3 gap-4">
+                {concerns.map((c, i) => (
+                  <div key={i} className="bg-white/10 rounded-lg p-4 text-center">
+                    {c.logo ? (
+                      <img src={c.logo} alt={c.name} className="w-14 h-14 object-contain mx-auto mb-2 rounded-lg bg-white p-1" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-brand mx-auto mb-2 grid place-items-center text-white font-bold text-xl">
+                        {c.name?.charAt(0) || "?"}
+                      </div>
+                    )}
+                    <div className="text-white text-sm font-semibold">{c.name || "Company"}</div>
+                    <div className="text-white/60 text-[11px] mt-1">{c.description || "Description"}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

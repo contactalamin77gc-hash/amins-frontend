@@ -20,7 +20,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="relative z-50 bg-brand">
+    <header className="sticky top-0 z-50 bg-brand">
       <div className="max-w-[1180px] mx-auto flex items-center justify-between px-6 py-2">
         <Link href="/" onClick={() => setMenuOpen(false)}>
           <Logo color="text-white" />

@@ -1,26 +1,189 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-brand: #0056F7;
+  --color-brand-deep: #0038A8;
+  --color-brand-ink: #06225C;
+  --color-brand-soft: #E8EFFE;
+  --color-brand-mist: #F4F7FF;
+
+  --color-ink: #0E1B33;
+  --color-gray-label: #5B6B8C;
+  --color-gray-line: #DDE6F8;
+
+  --color-success: #0BA05F;
+  --color-success-soft: #E2F6EC;
+  --color-warning: #D98A00;
+  --color-warning-soft: #FFF3DC;
+  --color-danger: #D93A3A;
+  --color-danger-soft: #FDE9E9;
+
+  --font-display: "Questrial", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  --radius-card: 14px;
+  --shadow-card: 0 10px 30px rgba(6, 34, 92, 0.08);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-brand-mist);
+}
+
+h1, h2, h3, .brand {
+  font-family: var(--font-display);
+}
+
+.btn-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 10px;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-blue:hover { background: var(--color-brand-deep); }
+.btn-blue:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--color-brand);
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-brand);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--color-brand-soft); }
+
+.btn-white {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #fff;
+  color: var(--color-brand);
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 10px;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-white:hover { background: var(--color-brand-soft); }
+
+.card {
+  background: #fff;
+  border: 1px solid var(--color-gray-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.field-input {
+  width: 100%;
+  border: 1.5px solid var(--color-gray-line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  transition: border-color 0.2s;
+  outline: none;
+  background: #fff;
+}
+.field-input:focus { border-color: var(--color-brand); }
+.field-input:disabled { background: var(--color-brand-mist); color: var(--color-gray-label); cursor: not-allowed; }
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-brand-ink);
+  margin-bottom: 6px;
+}
+
+/* MSC-inspired text styles for public pages */
+.text-hero {
+  font-size: clamp(42px, 6vw, 64px);
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+
+.text-section-title {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.text-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.text-body-lg {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--color-gray-label);
+}
+
+.text-nav-link {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.text-stat-number {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.text-stat-label {
+  font-size: 14px;
+  color: var(--color-gray-label);
+  margin-top: 4px;
+}
+
+.text-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.text-btn {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }

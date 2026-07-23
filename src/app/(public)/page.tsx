@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plane, Ship, Warehouse, ClipboardList, Package, Truck } from "lucide-react";
+import { Search, Plane, Ship, Warehouse, ClipboardList, Package, Truck, Loader2 } from "lucide-react";
 import { getSiteContent } from "@/lib/content";
 import ShippingCalculator from "@/components/public/shipping-calculator";
+import api from "@/lib/api";
 
 const ICONS: Record<string, any> = { Plane, Ship, Warehouse, ClipboardList, Package, Truck };
 
 export default function HomePage() {
   const [trackingInput, setTrackingInput] = useState("");
+  const [trackResult, setTrackResult] = useState<any>(null);
+  const [trackLoading, setTrackLoading] = useState(false);
   const [content, setContent] = useState<Record<string, any>>({});
   const router = useRouter();
   const servicesImage = content.services_image || "";
@@ -18,9 +21,17 @@ export default function HomePage() {
     getSiteContent().then(setContent);
   }, []);
 
-  const handleTrack = () => {
-    if (trackingInput.trim()) {
-      router.push(`/login?redirect=/dashboard&track=${trackingInput.trim()}`);
+  const handleTrack = async () => {
+    if (!trackingInput.trim()) return;
+    setTrackLoading(true);
+    setTrackResult(null);
+    try {
+      const res = await api.get(`/shipments/track/${trackingInput.trim()}`);
+      setTrackResult(res.data);
+    } catch {
+      setTrackResult({ found: false, message: "Failed to fetch. Please try again." });
+    } finally {
+      setTrackLoading(false);
     }
   };
 
@@ -45,20 +56,125 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-black/20" />
         <div className="max-w-[1180px] mx-auto px-6 py-20 md:py-28 relative z-10 flex justify-end w-full">
           <div className="w-full max-w-[440px]">
-            <div className="bg-white rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,20,80,.35)] text-ink">
+            <div className="bg-white rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,20,80,.35)] text-ink max-h-[80vh] overflow-y-auto">
               <h3 className="text-card-title text-brand-ink mb-1">Track your shipment</h3>
               <p className="text-[13px] text-gray-label mb-3.5">Enter your tracking or order number to see live status.</p>
               <div className="flex gap-2.5">
-                <input className="field-input flex-1" placeholder="e.g. AMN-24001 or ORD-24001" value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleTrack()} />
-                <button className="text-btn bg-brand text-white px-5 py-2.5 rounded-[10px] hover:bg-brand-deep transition-colors cursor-pointer flex items-center gap-2" onClick={handleTrack}>
-                  <Search size={16} /> TRACK
+                <input className="field-input flex-1" placeholder="e.g. AMN-24001 or ORD-24001"
+                  value={trackingInput}
+                  onChange={(e) => { setTrackingInput(e.target.value); if (trackResult) setTrackResult(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleTrack()} />
+                <button className="text-btn bg-brand text-white px-5 py-2.5 rounded-[10px] hover:bg-brand-deep transition-colors cursor-pointer flex items-center gap-2"
+                  onClick={handleTrack} disabled={trackLoading}>
+                  {trackLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                  TRACK
                 </button>
               </div>
-              <div className="flex gap-2 mt-4 flex-wrap">
-                <span className="badge bg-brand-soft text-brand"><span className="w-[7px] h-[7px] rounded-full bg-current" />In Transit</span>
-                <span className="badge bg-success-soft text-success"><span className="w-[7px] h-[7px] rounded-full bg-current" />Delivered</span>
-                <span className="badge bg-warning-soft text-warning"><span className="w-[7px] h-[7px] rounded-full bg-current" />Customs</span>
-              </div>
+
+              {/* Default badges — show when no result */}
+              {!trackResult && !trackLoading && (
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  <span className="badge bg-brand-soft text-brand"><span className="w-[7px] h-[7px] rounded-full bg-current" />In Transit</span>
+                  <span className="badge bg-success-soft text-success"><span className="w-[7px] h-[7px] rounded-full bg-current" />Delivered</span>
+                  <span className="badge bg-warning-soft text-warning"><span className="w-[7px] h-[7px] rounded-full bg-current" />Customs</span>
+                </div>
+              )}
+
+              {/* Loading */}
+              {trackLoading && (
+                <div className="mt-4 text-center text-gray-label text-sm py-3">
+                  <Loader2 size={20} className="animate-spin mx-auto mb-2 text-brand" />
+                  Searching...
+                </div>
+              )}
+
+              {/* Not Found */}
+              {trackResult && !trackResult.found && (
+                <div className="mt-4 p-3 rounded-lg bg-danger-soft text-danger text-sm">
+                  {trackResult.message || "No shipment found with this tracking number."}
+                </div>
+              )}
+
+              {/* Found — Show Result */}
+              {trackResult?.found && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-brand-soft">
+                    <div>
+                      <div className="text-sm font-bold text-brand-ink">{trackResult.trackingNumber}</div>
+                      <div className="text-[11px] text-gray-label">{trackResult.orderNumber}{trackResult.lotNumber ? ` · Lot ${trackResult.lotNumber}` : ""}</div>
+                    </div>
+                    <span className={`badge text-[11px] ${
+                      trackResult.status === "FULLY_DELIVERED" ? "bg-success-soft text-success"
+                        : trackResult.status === "IN_TRANSIT" || trackResult.status === "LEFT_CHINA" ? "bg-warning-soft text-warning"
+                        : trackResult.status === "CANCELLED" ? "bg-danger-soft text-danger"
+                        : "bg-brand-soft text-brand"
+                    }`}>
+                      {trackResult.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1 text-center p-2 rounded-lg bg-brand-mist">
+                      <div className="text-lg font-bold text-brand-ink">{trackResult.boxes.total}</div>
+                      <div className="text-[10px] text-gray-label">Total</div>
+                    </div>
+                    <div className="flex-1 text-center p-2 rounded-lg bg-success-soft">
+                      <div className="text-lg font-bold text-success">{trackResult.boxes.delivered}</div>
+                      <div className="text-[10px] text-gray-label">Delivered</div>
+                    </div>
+                    <div className="flex-1 text-center p-2 rounded-lg bg-warning-soft">
+                      <div className="text-lg font-bold text-warning">{trackResult.boxes.remaining}</div>
+                      <div className="text-[10px] text-gray-label">Remaining</div>
+                    </div>
+                  </div>
+
+                  {trackResult.boxes.items.length > 0 && (
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-1.5">
+                      {trackResult.boxes.items.map((box: any, i: number) => (
+                        <div key={i} className={`border-[1.5px] rounded-lg p-1.5 text-center text-[10px] ${
+                          box.status === "DELIVERED" ? "border-success bg-success-soft"
+                            : box.status === "IN_TRANSIT" ? "border-warning bg-warning-soft"
+                            : box.status === "ARRIVED" ? "border-brand bg-brand-soft"
+                            : "border-gray-line bg-white"
+                        }`}>
+                          <div className="font-bold text-brand-ink">{box.boxNumber}</div>
+                          <div className="text-gray-label">{box.status.replace(/_/g, " ")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {trackResult.timeline.length > 0 && (
+                    <div className="border-t border-gray-line pt-3">
+                      <div className="text-[11px] font-semibold text-gray-label uppercase tracking-wide mb-2">Timeline</div>
+                      <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                        {trackResult.timeline.map((t: any, i: number) => {
+                          const isLast = i === trackResult.timeline.length - 1;
+                          return (
+                            <div key={i} className="flex gap-2.5 items-start">
+                              <div className={`w-[14px] h-[14px] rounded-full shrink-0 mt-0.5 ${isLast ? "bg-white border-[2px] border-brand" : "bg-brand"}`} />
+                              <div>
+                                <div className={`text-[12px] font-semibold ${isLast ? "text-brand" : "text-brand-ink"}`}>
+                                  {t.remark || t.status.replace(/_/g, " ")}
+                                </div>
+                                <div className="text-[10px] text-gray-label">
+                                  {new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center pt-2 border-t border-gray-line">
+                    <a href="/login" className="text-brand text-[12px] font-semibold hover:underline">
+                      Log in for full details, invoices & more {"→"}
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

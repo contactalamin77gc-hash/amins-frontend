@@ -5,6 +5,7 @@ const api = axios.create({
   // baseURL: "http://localhost:5000/api",
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
   headers: { "Content-Type": "application/json" },
+  timeout: 30000, // fail with a clear error instead of hanging forever if the server is unreachable
 });
 
 // Attach access token to every request

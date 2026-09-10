@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Plane, Ship, Truck, Calculator, Package, Loader2 } from "lucide-react";
+import { getSiteContent } from "@/lib/content";
+import { Plane, Ship, Truck, Calculator, Package, Loader2, Globe } from "lucide-react";
+import Reveal from "./reveal";
 
 interface CalcResult {
   found: boolean;
@@ -25,6 +27,19 @@ interface Categories {
   methods: string[];
 }
 
+interface CalcCountry {
+  name: string;
+  code: string;
+  currency: string;
+  currencyCode: string;
+}
+
+const DEFAULT_COUNTRIES: CalcCountry[] = [
+  { name: "Bangladesh", code: "BD", currency: "৳", currencyCode: "BDT" },
+  { name: "China", code: "CN", currency: "¥", currencyCode: "CNY" },
+  { name: "Saudi Arabia", code: "SA", currency: "﷼", currencyCode: "SAR" },
+];
+
 const METHOD_ICONS: Record<string, any> = { AIR: Plane, SEA: Ship };
 const METHOD_LABELS: Record<string, string> = { AIR: "Air Freight", SEA: "Sea Freight" };
 const CONTAINS_LABELS: Record<string, string> = {
@@ -37,6 +52,8 @@ const CONTAINS_LABELS: Record<string, string> = {
 
 export default function ShippingCalculator() {
   const [cats, setCats] = useState<Categories>({ categories: [], containsTypes: [], methods: [] });
+  const [countries, setCountries] = useState<CalcCountry[]>(DEFAULT_COUNTRIES);
+  const [country, setCountry] = useState<CalcCountry>(DEFAULT_COUNTRIES[0]);
   const [method, setMethod] = useState("AIR");
   const [category, setCategory] = useState("");
   const [contains, setContains] = useState("GENERAL");
@@ -51,7 +68,16 @@ export default function ShippingCalculator() {
       setCats(res.data);
       if (res.data.categories.length > 0) setCategory(res.data.categories[0]);
     });
+    getSiteContent().then((content) => {
+      const list: CalcCountry[] = content.calculator_countries;
+      if (Array.isArray(list) && list.length > 0) {
+        setCountries(list);
+        setCountry(list[0]);
+      }
+    });
   }, []);
+
+  const currency = country?.currency || "৳";
 
   const handleCalculate = async () => {
     if (!category) return;
@@ -77,30 +103,48 @@ export default function ShippingCalculator() {
 
   return (
     <section className="bg-white border-b border-gray-line">
-      <div className="max-w-[1180px] mx-auto px-6 py-16">
+      <Reveal className="max-w-[1180px] mx-auto px-6 py-12 sm:py-16">
         <div className="text-center mb-10">
           <span className="text-kicker text-brand">Cost Calculator</span>
           <h2 className="text-section-title text-brand-ink mt-3 mb-3">Shipping Cost Calculator</h2>
           <div className="w-16 h-1 bg-brand mx-auto mb-4" />
           <p className="text-body-lg max-w-[50ch] mx-auto">
-            Estimate your shipping cost from China to Bangladesh instantly.
+            Estimate your shipping cost from China instantly.
           </p>
         </div>
 
         <div className="grid md:grid-cols-[1fr_380px] gap-8 items-start">
           {/* Calculator Form */}
           <div className="card p-6 space-y-5">
+            {/* Destination Country */}
+            <div>
+              <label className="field-label flex items-center gap-1.5"><Globe size={14} /> Destination Country *</label>
+              <select
+                className="field-input"
+                value={country?.code}
+                onChange={(e) => {
+                  const found = countries.find((c) => c.code === e.target.value);
+                  if (found) setCountry(found);
+                  setResult(null);
+                }}
+              >
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name} ({c.currencyCode})</option>
+                ))}
+              </select>
+            </div>
+
             {/* Shipping Method */}
             <div>
               <label className="field-label">Shipping Method *</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className={`grid gap-2.5 sm:gap-3 ${(cats.methods.length > 0 ? cats.methods : ["AIR", "SEA"]).length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}>
                 {(cats.methods.length > 0 ? cats.methods : ["AIR", "SEA"]).map((m) => {
                   const Icon = METHOD_ICONS[m] || Package;
                   return (
                     <button
                       key={m}
                       onClick={() => { setMethod(m); setResult(null); }}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                      className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer ${
                         method === m
                           ? "border-brand bg-brand-soft text-brand"
                           : "border-gray-line text-gray-label hover:border-brand/50"
@@ -176,11 +220,11 @@ export default function ShippingCalculator() {
             <div className="card overflow-hidden">
               <div className="bg-brand text-white p-5 text-center">
                 <div className="text-sm font-bold uppercase tracking-wide opacity-80 mb-1">Estimated Shipping Cost</div>
-                <div className="text-[42px] font-bold leading-none">
-                  {result?.found ? `৳${result.estimatedCost?.toLocaleString()}` : "৳ —"}
+                <div className="text-[32px] sm:text-[42px] font-bold leading-none break-words">
+                  {result?.found ? `${currency}${result.estimatedCost?.toLocaleString()}` : `${currency} —`}
                 </div>
                 {result?.found && (
-                  <div className="text-sm opacity-80 mt-2">China → Bangladesh</div>
+                  <div className="text-sm opacity-80 mt-2">China → {country?.name}</div>
                 )}
               </div>
               <div className="p-5">
@@ -206,15 +250,15 @@ export default function ShippingCalculator() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-label">Rate per KG</span>
-                      <span className="font-semibold text-brand-ink">{"৳"}{result.ratePerKg?.toLocaleString()}</span>
+                      <span className="font-semibold text-brand-ink">{currency}{result.ratePerKg?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-label">Rate per CBM</span>
-                      <span className="font-semibold text-brand-ink">{"৳"}{result.ratePerCbm?.toLocaleString()}</span>
+                      <span className="font-semibold text-brand-ink">{currency}{result.ratePerCbm?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-label">Minimum Charge</span>
-                      <span className="font-semibold text-brand-ink">{"৳"}{result.minCharge?.toLocaleString()}</span>
+                      <span className="font-semibold text-brand-ink">{currency}{result.minCharge?.toLocaleString()}</span>
                     </div>
                     <div className="border-t border-gray-line pt-3 flex justify-between text-sm">
                       <span className="text-gray-label">Estimated Delivery</span>
@@ -240,7 +284,7 @@ export default function ShippingCalculator() {
             </div>
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

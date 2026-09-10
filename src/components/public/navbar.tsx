@@ -9,10 +9,10 @@ import { Menu, X } from "lucide-react";
 const links = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About Us" },
-  { href: "/services", label: "Services" },
+  { href: "/#services", label: "Services" },
   { href: "/packing-instructions", label: "Packing Guide" },
   { href: "/terms", label: "Terms & Conditions" },
-  { href: "/contact", label: "Contact" },
+  { href: "/#contact", label: "Contact" },
 ];
 
 export default function Navbar() {
@@ -40,11 +40,6 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          {/* Desktop login button */}
-          <Link href="/login" className="hidden md:inline-flex text-btn bg-white text-brand px-5 py-2.5 rounded-[10px] hover:bg-white/90 transition-colors">
-            Log in
-          </Link>
-
           {/* Mobile menu button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -70,13 +65,6 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/login"
-              onClick={() => setMenuOpen(false)}
-              className="text-btn bg-white text-brand px-5 py-3 rounded-[10px] mt-3 text-center hover:bg-white/90 transition-colors"
-            >
-              Log in
-            </Link>
           </nav>
         </div>
       )}

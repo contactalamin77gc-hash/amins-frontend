@@ -6,7 +6,7 @@ import { useAuth } from "@/context/auth-context";
 import Logo from "@/components/ui/logo";
 import {
   LayoutDashboard, Ship, Package, FileText, Users, BarChart3,
-  Bell, Shield, ScrollText, Settings, LogOut, Calculator, Menu, X,
+  Bell, Shield, ScrollText, Settings, LogOut, Calculator, Menu, X, MessageSquareText,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -17,6 +17,7 @@ const opsMenu = [
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/rates", label: "Shipping Rates", icon: Calculator },
+  { href: "/dashboard/quotes", label: "Quotes", icon: MessageSquareText },
 ];
 
 const insightMenu = [

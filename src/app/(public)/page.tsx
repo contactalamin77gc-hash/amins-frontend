@@ -1,25 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Search, Plane, Ship, Warehouse, ClipboardList, Package, Truck, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Search, Loader2 } from "lucide-react";
 import { getSiteContent } from "@/lib/content";
 import ShippingCalculator from "@/components/public/shipping-calculator";
+import AboutVideos from "@/components/public/about-videos";
+import ServicesSection from "@/components/public/services-section";
+import OperatingGlobally from "@/components/public/operating-globally";
+import GallerySection from "@/components/public/gallery-section";
+import GetQuoteForm from "@/components/public/get-quote-form";
+import ContactDetails from "@/components/public/contact-details";
+import WorkingWith from "@/components/public/working-with";
+import Reveal from "@/components/public/reveal";
 import api from "@/lib/api";
-
-const ICONS: Record<string, any> = { Plane, Ship, Warehouse, ClipboardList, Package, Truck };
 
 export default function HomePage() {
   const [trackingInput, setTrackingInput] = useState("");
   const [trackResult, setTrackResult] = useState<any>(null);
   const [trackLoading, setTrackLoading] = useState(false);
   const [content, setContent] = useState<Record<string, any>>({});
-  const router = useRouter();
-  const servicesImage = content.services_image || "";
+  const [heroIdx, setHeroIdx] = useState(0);
 
   useEffect(() => {
     getSiteContent().then(setContent);
   }, []);
+
+  const heroImages: string[] = content.hero_images?.length
+    ? content.hero_images
+    : (content.hero_image ? [content.hero_image] : []);
+
+  // Cross-fade to the next background photo every few seconds
+  useEffect(() => {
+    if (heroImages.length < 2) return;
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % heroImages.length), 5000);
+    return () => clearInterval(t);
+  }, [heroImages.length]);
 
   const handleTrack = async () => {
     if (!trackingInput.trim()) return;
@@ -36,28 +52,32 @@ export default function HomePage() {
   };
 
 
-  const heroImage = content.hero_image || "";
-  
-  const servicesTitle = content.services_title || "Everything between the supplier and your warehouse.";
-  const servicesSubtitle = content.services_subtitle || "We handle the full logistics chain so you only deal with one company — us.";
-  const services = content.services || [];
-  const ctaTitle = content.cta_title || "Ready to ship from China?";
-  const ctaSubtitle = content.cta_subtitle || "Contact us to set up your account.";
   const testimonialsTitle = content.testimonials_title || "What Our Clients Say";
   const testimonials = content.testimonials || [];
-  const concernTitle = content.concern_title || "Our Concern";
+  const ctaTitle = content.cta_title || "Ready to ship from China?";
+  const ctaSubtitle = content.cta_subtitle || "Contact us to set up your account.";
+  const concernTitle = content.concern_title || "Sister Concern";
   const concerns = content.concerns || [];
 
   return (
     <>
+      {/* ═══ HERO ═══ */}
       <section className="relative overflow-hidden flex items-center" style={{ minHeight: "550px" }}>
-        {heroImage && (
-          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        {heroImages.length > 0 ? (
+          heroImages.map((img, i) => (
+            <img
+              key={img + i}
+              src={img}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${i === heroIdx ? "opacity-100" : "opacity-0"}`}
+            />
+          ))
+        ) : (
+          <div className="absolute inset-0 bg-[#1a2332]" />
         )}
-        {!heroImage && <div className="absolute inset-0 bg-[#1a2332]" />}
         <div className="absolute inset-0 bg-black/20" />
         <div className="max-w-[1180px] mx-auto px-6 py-20 md:py-28 relative z-10 flex justify-end w-full">
-          <div className="w-full max-w-[440px]">
+          <div className="w-full max-w-[440px] animate-fade-in-up">
             <div className="bg-white rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,20,80,.35)] text-ink max-h-[80vh] overflow-y-auto">
               <h3 className="text-card-title text-brand-ink mb-1">Track your shipment</h3>
               <p className="text-[13px] text-gray-label mb-3.5">Enter your tracking or order number to see live status.</p>
@@ -182,51 +202,30 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ SHIPPING COST CALCULATOR ═══ */}
       <ShippingCalculator />
 
-      <section className="py-20">
-        <div className="max-w-[1180px] mx-auto px-6 text-center mb-12">
-          <h2 className="text-section-title text-brand-ink mb-3">{servicesTitle}</h2>
-          <div className="w-16 h-1 bg-brand mx-auto mb-5" />
-          <p className="text-body-lg max-w-[60ch] mx-auto">{servicesSubtitle}</p>
-        </div>
+      {/* ═══ ABOUT US (video grid) ═══ */}
+      <AboutVideos />
 
-        <div className="max-w-[1180px] mx-auto px-6">
-          <div className="relative rounded-2xl overflow-hidden min-h-[400px]" style={{
-            background: servicesImage
-              ? `url(${servicesImage}) center/cover no-repeat`
-              : "linear-gradient(135deg, #1a2332 0%, #0E1B33 100%)",
-          }}>
-            <div className="absolute inset-0 bg-black/50" />
-            <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-0 min-h-[400px]">
-              {services.map((svc: any, i: number) => {
-                const Icon = ICONS[svc.icon] || Package;
-                return (
-                  <div key={i} className={`flex flex-col items-center justify-center p-8 text-white text-center transition-all hover:bg-white/10 cursor-pointer ${i < services.length - 1 ? "border-r border-white/15" : ""}`}>
-                    <div className="w-16 h-16 rounded-full border-2 border-white/40 grid place-items-center mb-5">
-                      <Icon size={28} strokeWidth={1.5} />
-                    </div>
-                    <h3 className="text-[17px] font-bold leading-tight">{svc.title}</h3>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ═══ SERVICES ═══ */}
+      <ServicesSection />
+
+      {/* ═══ OPERATING GLOBALLY ═══ */}
+      <OperatingGlobally />
 
       {/* ═══ TESTIMONIALS ═══ */}
       {testimonials.length > 0 && (
-        <section className="bg-brand-ink py-20">
+        <section className="bg-brand-ink py-12 sm:py-20">
           <div className="max-w-[1180px] mx-auto px-6">
-            <div className="text-center mb-12">
+            <Reveal className="text-center mb-8 sm:mb-12">
               <span className="text-kicker text-white/60">Testimonials</span>
               <h2 className="text-section-title text-white mt-3 mb-3">{testimonialsTitle}</h2>
               <div className="w-16 h-1 bg-brand mx-auto" />
-            </div>
+            </Reveal>
             <div className="grid md:grid-cols-3 gap-6">
               {testimonials.map((t: any, i: number) => (
-                <div key={i} className="bg-white/10 backdrop-blur-sm rounded-2xl p-7 border border-white/10 hover:bg-white/15 transition-colors">
+                <Reveal key={i} delay={i * 100} className="bg-white/10 backdrop-blur-sm rounded-2xl p-7 border border-white/10 hover:bg-white/15 transition-colors">
                   {/* Stars */}
                   <div className="flex gap-1 mb-4">
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -249,52 +248,58 @@ export default function HomePage() {
                       <div className="text-white/50 text-[12px]">{t.company}</div>
                     </div>
                   </div>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
         </section>
       )}
 
-      <section className="max-w-[1180px] mx-auto px-6 py-20 text-center">
-
-        <h2 className="text-section-title text-brand-ink mb-4">{ctaTitle}</h2>
-        <p className="text-body-lg max-w-[50ch] mx-auto mb-8">{ctaSubtitle}</p>
-        <div className="flex gap-3.5 justify-center">
-          <button className="text-btn bg-brand text-white px-8 py-3.5 rounded-[10px] hover:bg-brand-deep transition-colors cursor-pointer">Contact Us</button>
-          <button className="text-btn px-8 py-3.5 rounded-[10px] border-[1.5px] border-brand text-brand hover:bg-brand-soft transition-colors cursor-pointer">Learn More</button>
-        </div>
+      {/* ═══ CTA ═══ */}
+      <section className="max-w-[1180px] mx-auto px-6 py-14 sm:py-20 text-center">
+        <Reveal>
+          <h2 className="text-section-title text-brand-ink mb-4">{ctaTitle}</h2>
+          <p className="text-body-lg max-w-[50ch] mx-auto mb-8">{ctaSubtitle}</p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-3.5 justify-center items-center">
+            <Link href="/#contact" className="text-btn bg-brand text-white px-8 py-3.5 rounded-[10px] hover:bg-brand-deep transition-colors cursor-pointer w-full sm:w-auto text-center">Contact Us</Link>
+            <Link href="/about" className="text-btn px-8 py-3.5 rounded-[10px] border-[1.5px] border-brand text-brand hover:bg-brand-soft transition-colors cursor-pointer w-full sm:w-auto text-center">Learn More</Link>
+          </div>
+        </Reveal>
       </section>
 
-      {/* ═══ OUR CONCERN ═══ */}
+      {/* ═══ SISTER CONCERN ═══ */}
       {concerns.length > 0 && (
-        <section className="bg-brand-ink py-16">
+        <section className="bg-brand-ink py-12 sm:py-16">
           <div className="max-w-[1180px] mx-auto px-6">
-            <div className="text-center mb-10">
+            <Reveal className="text-center mb-10">
               <h2 className="text-section-title text-white mb-3">{concernTitle}</h2>
               <div className="w-16 h-1 bg-brand mx-auto" />
-            </div>
+            </Reveal>
             <div className={`grid gap-6 ${concerns.length === 1 ? "grid-cols-1 max-w-[400px] mx-auto" : concerns.length === 2 ? "grid-cols-2 max-w-[700px] mx-auto" : "md:grid-cols-3"}`}>
               {concerns.map((c: any, i: number) => {
                 const card = (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/10 hover:bg-white/15 transition-all text-center group">
+                  <Reveal delay={i * 100} className="relative rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all group min-h-[280px] flex items-end">
+                    {/* Full card background — photo, or a brand-colored fallback with the initial */}
                     {c.logo ? (
-                      <div className="w-20 h-20 rounded-xl bg-white mx-auto mb-5 p-2 flex items-center justify-center">
-                        <img src={c.logo} alt={c.name} className="max-w-full max-h-full object-contain" />
-                      </div>
+                      <img src={c.logo} alt={c.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
-                      <div className="w-20 h-20 rounded-xl bg-brand mx-auto mb-5 grid place-items-center text-white font-bold text-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-br from-brand to-brand-ink grid place-items-center text-white font-bold text-6xl">
                         {c.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                     )}
-                    <h3 className="text-white font-bold text-lg mb-2">{c.name}</h3>
-                    <p className="text-white/70 text-sm leading-relaxed">{c.description}</p>
-                    {c.link && (
-                      <div className="mt-4 text-brand text-sm font-semibold group-hover:underline">
-                        Visit Website {"→"}
-                      </div>
-                    )}
-                  </div>
+                    {/* Scrim for text legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+
+                    <div className="relative z-10 p-6 text-center w-full">
+                      <h3 className="text-white font-bold text-lg mb-2">{c.name}</h3>
+                      <p className="text-white/80 text-sm leading-relaxed">{c.description}</p>
+                      {c.link && (
+                        <div className="mt-4 text-white text-sm font-semibold group-hover:underline">
+                          Visit Website {"→"}
+                        </div>
+                      )}
+                    </div>
+                  </Reveal>
                 );
 
                 return c.link ? (
@@ -307,6 +312,18 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* ═══ PHOTO GALLERY ═══ */}
+      <GallerySection />
+
+      {/* ═══ GET A QUOTE ═══ */}
+      <GetQuoteForm />
+
+      {/* ═══ CONTACT US DETAILS ═══ */}
+      <ContactDetails />
+
+      {/* ═══ WORKING WITH ═══ */}
+      <WorkingWith />
     </>
   );
 }

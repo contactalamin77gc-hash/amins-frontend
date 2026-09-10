@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const publicPaths = ["/", "/about", "/services", "/import-process", "/pricing", "/contact", "/login"];
+  const publicPaths = ["/", "/about", "/services", "/import-process", "/pricing", "/contact", "/login", "/packing-instructions", "/terms"];
 
   const fetchUser = useCallback(async () => {
     const token = Cookies.get("accessToken");

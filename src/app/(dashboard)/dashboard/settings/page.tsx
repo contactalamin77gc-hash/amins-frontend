@@ -17,14 +17,23 @@ interface ContentItem {
 
 const GROUPS = [
   { key: "hero", label: "Hero Section" },
+  { key: "calculator", label: "Calculator" },
+  { key: "about_videos", label: "About Videos" },
   { key: "services", label: "Services" },
+  { key: "global", label: "Operating Globally" },
   { key: "testimonials", label: "Testimonials" },
   { key: "cta", label: "Call to Action" },
+  { key: "sister_concern", label: "Sister Concern" },
+  { key: "gallery", label: "Gallery" },
+  { key: "quote_form", label: "Get a Quote" },
   { key: "about", label: "About Page" },
   { key: "contact", label: "Contact Info" },
-  { key: "concern", label: "Our Concern" },
+  { key: "partners", label: "Partners" },
+  { key: "social", label: "Social Links" },
   { key: "footer", label: "Footer" },
 ];
+
+const CATEGORY_OPTIONS = ["Warehouse", "Team", "Suppliers"];
 
 export default function SettingsPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -38,6 +47,12 @@ export default function SettingsPage() {
   const [processSteps, setProcessSteps] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [concerns, setConcerns] = useState<any[]>([]);
+  const [calculatorCountries, setCalculatorCountries] = useState<any[]>([]);
+  const [aboutVideos, setAboutVideos] = useState<any[]>([]);
+  const [globalCountries, setGlobalCountries] = useState<any[]>([]);
+  const [galleryPhotos, setGalleryPhotos] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [heroImages, setHeroImages] = useState<string[]>([]);
 
   useEffect(() => {
     api.get("/site-content/admin").then((res) => {
@@ -53,6 +68,17 @@ export default function SettingsPage() {
 
       const concernItem = res.data.find((i: ContentItem) => i.key === "concerns");
       if (concernItem) try { setConcerns(JSON.parse(concernItem.value)); } catch { setConcerns([]); }
+
+      const parseJson = (key: string, setter: (v: any[]) => void) => {
+        const item = res.data.find((i: ContentItem) => i.key === key);
+        if (item) try { setter(JSON.parse(item.value)); } catch { setter([]); }
+      };
+      parseJson("calculator_countries", setCalculatorCountries);
+      parseJson("about_videos", setAboutVideos);
+      parseJson("global_countries", setGlobalCountries);
+      parseJson("gallery_photos", setGalleryPhotos);
+      parseJson("partners", setPartners);
+      parseJson("hero_images", setHeroImages);
     });
   }, []);
 
@@ -65,15 +91,21 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Sync JSON fields back to items before saving
-      updateItem("services", JSON.stringify(services));
-      updateItem("process_steps", JSON.stringify(processSteps));
+      const jsonFieldMap: Record<string, any[]> = {
+        services,
+        process_steps: processSteps,
+        testimonials,
+        concerns,
+        calculator_countries: calculatorCountries,
+        about_videos: aboutVideos,
+        global_countries: globalCountries,
+        gallery_photos: galleryPhotos,
+        partners,
+        hero_images: heroImages,
+      };
 
       const allItems = items.map((i) => {
-        if (i.key === "services") return { ...i, value: JSON.stringify(services) };
-        if (i.key === "process_steps") return { ...i, value: JSON.stringify(processSteps) };
-        if (i.key === "testimonials") return { ...i, value: JSON.stringify(testimonials) };
-        if (i.key === "concerns") return { ...i, value: JSON.stringify(concerns) };
+        if (i.key in jsonFieldMap) return { ...i, value: JSON.stringify(jsonFieldMap[i.key]) };
         return i;
       });
 
@@ -91,6 +123,17 @@ export default function SettingsPage() {
     }
   };
 
+  const getUploadErrorMessage = (err: any) => {
+    if (err?.code === "ECONNABORTED" || err?.message === "Network Error") {
+      return "Could not reach the server. Check your connection and try again.";
+    }
+    const msg = err?.response?.data?.message;
+    if (typeof msg === "string") return msg;
+    if (Array.isArray(msg) && msg.length > 0) return msg[0];
+    if (err?.response?.status === 413) return "Image is too large (max 10MB).";
+    return "Failed to upload image. Please try again.";
+  };
+
   const handleUpload = async (key: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -99,18 +142,76 @@ export default function SettingsPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       updateItem(key, res.data.url);
-    } catch {
-      alert("Failed to upload image");
+    } catch (err) {
+      alert(getUploadErrorMessage(err));
+    }
+  };
+
+  // Generic helper for uploading an image used inside a list item (service/gallery/partner/etc.)
+  const uploadImageFile = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await api.post("/upload/image", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      return res.data.url;
+    } catch (err) {
+      alert(getUploadErrorMessage(err));
+      return null;
     }
   };
 
   // ═══ SERVICE HELPERS ═══
-  const addService = () => setServices([...services, { icon: "Package", title: "", desc: "" }]);
+  const addService = () => setServices([...services, { icon: "Package", title: "", image: "" }]);
   const removeService = (i: number) => setServices(services.filter((_, idx) => idx !== i));
   const updateService = (i: number, field: string, value: string) => {
     const updated = [...services];
     updated[i] = { ...updated[i], [field]: value };
     setServices(updated);
+  };
+
+  // ═══ CALCULATOR COUNTRY HELPERS ═══
+  const addCalcCountry = () => setCalculatorCountries([...calculatorCountries, { name: "", code: "", currency: "", currencyCode: "" }]);
+  const removeCalcCountry = (i: number) => setCalculatorCountries(calculatorCountries.filter((_, idx) => idx !== i));
+  const updateCalcCountry = (i: number, field: string, value: string) => {
+    const updated = [...calculatorCountries];
+    updated[i] = { ...updated[i], [field]: value };
+    setCalculatorCountries(updated);
+  };
+
+  // ═══ ABOUT VIDEO HELPERS ═══
+  const addAboutVideo = () => setAboutVideos([...aboutVideos, { title: "", url: "" }]);
+  const removeAboutVideo = (i: number) => setAboutVideos(aboutVideos.filter((_, idx) => idx !== i));
+  const updateAboutVideo = (i: number, field: string, value: string) => {
+    const updated = [...aboutVideos];
+    updated[i] = { ...updated[i], [field]: value };
+    setAboutVideos(updated);
+  };
+
+  // ═══ GLOBAL COUNTRY HELPERS ═══
+  const addGlobalCountry = () => setGlobalCountries([...globalCountries, { name: "", image: "", description: "" }]);
+  const removeGlobalCountry = (i: number) => setGlobalCountries(globalCountries.filter((_, idx) => idx !== i));
+  const updateGlobalCountry = (i: number, field: string, value: string) => {
+    const updated = [...globalCountries];
+    updated[i] = { ...updated[i], [field]: value };
+    setGlobalCountries(updated);
+  };
+
+  // ═══ GALLERY PHOTO HELPERS ═══
+  const addGalleryPhoto = () => setGalleryPhotos([...galleryPhotos, { url: "", caption: "", category: "Warehouse" }]);
+  const removeGalleryPhoto = (i: number) => setGalleryPhotos(galleryPhotos.filter((_, idx) => idx !== i));
+  const updateGalleryPhoto = (i: number, field: string, value: string) => {
+    const updated = [...galleryPhotos];
+    updated[i] = { ...updated[i], [field]: value };
+    setGalleryPhotos(updated);
+  };
+
+  // ═══ PARTNER HELPERS ═══
+  const addPartner = () => setPartners([...partners, { name: "", logo: "", link: "" }]);
+  const removePartner = (i: number) => setPartners(partners.filter((_, idx) => idx !== i));
+  const updatePartner = (i: number, field: string, value: string) => {
+    const updated = [...partners];
+    updated[i] = { ...updated[i], [field]: value };
+    setPartners(updated);
   };
 
   // ═══ PROCESS STEP HELPERS ═══
@@ -173,6 +274,37 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            <p className="text-[11px] text-gray-label mt-1">Used only when no slideshow images are added below.</p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Background Slideshow (optional)</label>
+              <label className="btn-ghost cursor-pointer py-1.5 px-3 text-[12px]">
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  if (!e.target.files?.[0]) return;
+                  const url = await uploadImageFile(e.target.files[0]);
+                  if (url) setHeroImages([...heroImages, url]);
+                }} />
+                <Plus size={14} /> Add Image
+              </label>
+            </div>
+            <p className="text-[11px] text-gray-label mb-3">Add 2 or more images and the hero background will automatically cross-fade between them. Leave empty to use the single background image above.</p>
+            {heroImages.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {heroImages.map((img, i) => (
+                  <div key={i} className="relative rounded-lg overflow-hidden border border-gray-line aspect-video group">
+                    <img src={img} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setHeroImages(heroImages.filter((_, idx) => idx !== i))}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                    >
+                      <Trash2 size={18} className="text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -217,6 +349,101 @@ export default function SettingsPage() {
                 <span className="bg-white text-brand px-4 py-1.5 rounded-lg text-xs font-bold">{getVal("hero_btn1_text")}</span>
                 <span className="border border-white/50 px-4 py-1.5 rounded-lg text-xs font-bold">{getVal("hero_btn2_text")}</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ CALCULATOR SECTION ═══ */}
+      {activeGroup === "calculator" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Shipping Cost Calculator — Countries</h2>
+          <p className="text-[13px] text-gray-label">Countries shown in the calculator&apos;s destination dropdown, with the currency symbol used for that country.</p>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Countries</label>
+              <button onClick={addCalcCountry} className="btn-ghost py-1.5 px-3 text-[12px]"><Plus size={14} /> Add Country</button>
+            </div>
+            <div className="space-y-3">
+              {calculatorCountries.map((c, i) => (
+                <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-ink">Country {i + 1}</span>
+                    <button onClick={() => removeCalcCountry(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Name</label>
+                      <input className="field-input text-[13px]" placeholder="Bangladesh" value={c.name} onChange={(e) => updateCalcCountry(i, "name", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Code</label>
+                      <input className="field-input text-[13px]" placeholder="BD" value={c.code} onChange={(e) => updateCalcCountry(i, "code", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Currency Symbol</label>
+                      <input className="field-input text-[13px]" placeholder="৳" value={c.currency} onChange={(e) => updateCalcCountry(i, "currency", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Currency Code</label>
+                      <input className="field-input text-[13px]" placeholder="BDT" value={c.currencyCode} onChange={(e) => updateCalcCountry(i, "currencyCode", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ABOUT VIDEOS SECTION ═══ */}
+      {activeGroup === "about_videos" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">About Us — Videos</h2>
+
+          <div>
+            <label className="field-label">Section Title</label>
+            <input className="field-input" value={getVal("about_videos_title")} onChange={(e) => updateItem("about_videos_title", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Description</label>
+            <textarea className="field-input min-h-[100px]" value={getVal("about_videos_description")} onChange={(e) => updateItem("about_videos_description", e.target.value)} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">YouTube Videos</label>
+              <button onClick={addAboutVideo} className="btn-ghost py-1.5 px-3 text-[12px]"><Plus size={14} /> Add Video</button>
+            </div>
+            <div className="space-y-3">
+              {aboutVideos.map((v, i) => {
+                const match = v.url?.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+                const videoId = match ? match[1] : null;
+                return (
+                  <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold text-brand-ink">Video {i + 1}</span>
+                      <button onClick={() => removeAboutVideo(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[11px] text-gray-label font-semibold mb-1 block">Title</label>
+                        <input className="field-input text-[13px]" placeholder="Our Warehouse Tour" value={v.title} onChange={(e) => updateAboutVideo(i, "title", e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-label font-semibold mb-1 block">YouTube URL</label>
+                        <input className="field-input text-[13px]" placeholder="https://www.youtube.com/watch?v=..." value={v.url} onChange={(e) => updateAboutVideo(i, "url", e.target.value)} />
+                      </div>
+                    </div>
+                    {videoId && (
+                      <div className="rounded-lg overflow-hidden" style={{ position: "relative", paddingTop: "56.25%" }}>
+                        <iframe className="absolute inset-0 w-full h-full" src={`https://www.youtube.com/embed/${videoId}`} title={v.title} loading="lazy" allowFullScreen />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -268,7 +495,7 @@ export default function SettingsPage() {
                     <span className="text-sm font-semibold text-brand-ink">Service {i + 1}</span>
                     <button onClick={() => removeService(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
                   </div>
-                  <div className="grid grid-cols-[120px_1fr] gap-3">
+                  <div className="grid grid-cols-[120px_1fr] gap-3 mb-3">
                     <div>
                       <label className="text-[11px] text-gray-label font-semibold mb-1 block">Icon</label>
                       <select className="field-input text-[13px]" value={svc.icon} onChange={(e) => updateService(i, "icon", e.target.value)}>
@@ -279,6 +506,26 @@ export default function SettingsPage() {
                       <label className="text-[11px] text-gray-label font-semibold mb-1 block">Title</label>
                       <input className="field-input text-[13px]" placeholder="e.g. Air Freight" value={svc.title} onChange={(e) => updateService(i, "title", e.target.value)} />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Card Background Image (shown when this card is active)</label>
+                    <div className="flex gap-2 items-start">
+                      <input className="field-input text-[13px] flex-1" placeholder="Paste image URL or upload" value={svc.image || ""}
+                        onChange={(e) => updateService(i, "image", e.target.value)} />
+                      <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          const url = await uploadImageFile(e.target.files[0]);
+                          if (url) updateService(i, "image", url);
+                        }} />
+                        Upload
+                      </label>
+                    </div>
+                    {svc.image && (
+                      <div className="mt-2 w-full h-20 rounded-lg overflow-hidden border border-gray-line">
+                        <img src={svc.image} alt={svc.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -299,6 +546,94 @@ export default function SettingsPage() {
                   <div key={i} className={`flex flex-col items-center justify-center p-4 text-white text-center ${i < services.length - 1 ? "border-r border-white/15" : ""}`}>
                     <div className="w-10 h-10 rounded-full border-2 border-white/40 grid place-items-center mb-3 text-sm font-bold">{svc.icon?.charAt(0)}</div>
                     <div className="text-xs font-bold">{svc.title || "Untitled"}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ OPERATING GLOBALLY SECTION ═══ */}
+      {activeGroup === "global" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Operating Globally</h2>
+          <div>
+            <label className="field-label">Title</label>
+            <input className="field-input" value={getVal("global_title")} onChange={(e) => updateItem("global_title", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Subtitle</label>
+            <textarea className="field-input min-h-[80px]" value={getVal("global_subtitle")} onChange={(e) => updateItem("global_subtitle", e.target.value)} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Countries</label>
+              <button onClick={addGlobalCountry} className="btn-ghost py-1.5 px-3 text-[12px]"><Plus size={14} /> Add Country</button>
+            </div>
+            <div className="space-y-3">
+              {globalCountries.map((c, i) => (
+                <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-ink">Country {i + 1}</span>
+                    <button onClick={() => removeGlobalCountry(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Name</label>
+                      <input className="field-input text-[13px]" placeholder="Bangladesh" value={c.name} onChange={(e) => updateGlobalCountry(i, "name", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Description</label>
+                      <input className="field-input text-[13px]" placeholder="Headquarters & delivery hub" value={c.description} onChange={(e) => updateGlobalCountry(i, "description", e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Country Image</label>
+                    <div className="flex gap-2 items-start">
+                      <input className="field-input text-[13px] flex-1" placeholder="Paste image URL or upload" value={c.image || ""}
+                        onChange={(e) => updateGlobalCountry(i, "image", e.target.value)} />
+                      <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          const url = await uploadImageFile(e.target.files[0]);
+                          if (url) updateGlobalCountry(i, "image", url);
+                        }} />
+                        Upload
+                      </label>
+                    </div>
+                    {c.image && (
+                      <div className="mt-2 w-full h-24 rounded-lg overflow-hidden border border-gray-line">
+                        <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div>
+            <label className="field-label">Preview</label>
+            <div className="bg-brand rounded-xl p-6">
+              <div className="text-center text-white font-bold text-lg mb-4">{getVal("global_title") || "Now We Are Operating Globally"}</div>
+              <div className="grid grid-cols-3 gap-4">
+                {globalCountries.map((c, i) => (
+                  <div key={i} className="relative rounded-lg overflow-hidden min-h-[120px] flex items-end">
+                    {c.image ? (
+                      <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 bg-white/10 grid place-items-center text-white/50 font-bold text-2xl">
+                        {c.name?.charAt(0) || "?"}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                    <div className="relative z-10 p-3 text-center w-full">
+                      <div className="text-white text-sm font-semibold">{c.name || "Country"}</div>
+                      <div className="text-white/70 text-[11px] mt-1">{c.description || "Description"}</div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -364,10 +699,10 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ═══ OUR CONCERN SECTION ═══ */}
-      {activeGroup === "concern" && (
+      {/* ═══ SISTER CONCERN SECTION ═══ */}
+      {activeGroup === "sister_concern" && (
         <div className="card p-6 space-y-5">
-          <h2 className="text-lg font-display text-brand-ink">Our Concern</h2>
+          <h2 className="text-lg font-display text-brand-ink">Sister Concern</h2>
 
           <div>
             <label className="field-label">Section Title</label>
@@ -419,12 +754,8 @@ export default function SettingsPage() {
                       <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
                         <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                           if (!e.target.files?.[0]) return;
-                          const formData = new FormData();
-                          formData.append("file", e.target.files[0]);
-                          try {
-                            const res = await api.post("/upload/image", formData, { headers: { "Content-Type": "multipart/form-data" } });
-                            const u = [...concerns]; u[i] = { ...u[i], logo: res.data.url }; setConcerns(u);
-                          } catch { alert("Upload failed"); }
+                          const url = await uploadImageFile(e.target.files[0]);
+                          if (url) { const u = [...concerns]; u[i] = { ...u[i], logo: url }; setConcerns(u); }
                         }} />
                         Upload
                       </label>
@@ -444,19 +775,22 @@ export default function SettingsPage() {
           <div>
             <label className="field-label">Preview</label>
             <div className="bg-brand-ink rounded-xl p-6">
-              <div className="text-center text-white font-bold text-lg mb-4">{getVal("concern_title") || "Our Concern"}</div>
+              <div className="text-center text-white font-bold text-lg mb-4">{getVal("concern_title") || "Sister Concern"}</div>
               <div className="grid grid-cols-3 gap-4">
                 {concerns.map((c, i) => (
-                  <div key={i} className="bg-white/10 rounded-lg p-4 text-center">
+                  <div key={i} className="relative rounded-lg overflow-hidden min-h-[140px] flex items-end">
                     {c.logo ? (
-                      <img src={c.logo} alt={c.name} className="w-14 h-14 object-contain mx-auto mb-2 rounded-lg bg-white p-1" />
+                      <img src={c.logo} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
-                      <div className="w-14 h-14 rounded-lg bg-brand mx-auto mb-2 grid place-items-center text-white font-bold text-xl">
+                      <div className="absolute inset-0 bg-gradient-to-br from-brand to-brand-ink grid place-items-center text-white font-bold text-2xl">
                         {c.name?.charAt(0) || "?"}
                       </div>
                     )}
-                    <div className="text-white text-sm font-semibold">{c.name || "Company"}</div>
-                    <div className="text-white/60 text-[11px] mt-1">{c.description || "Description"}</div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                    <div className="relative z-10 p-3 text-center w-full">
+                      <div className="text-white text-sm font-semibold">{c.name || "Company"}</div>
+                      <div className="text-white/70 text-[11px] mt-1">{c.description || "Description"}</div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -466,6 +800,155 @@ export default function SettingsPage() {
       )}
 
       {/* ═══ CTA SECTION ═══ */}
+      {/* ═══ GALLERY SECTION ═══ */}
+      {activeGroup === "gallery" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Photo Gallery</h2>
+          <div>
+            <label className="field-label">Section Title</label>
+            <input className="field-input" value={getVal("gallery_title")} onChange={(e) => updateItem("gallery_title", e.target.value)} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Photos</label>
+              <button onClick={addGalleryPhoto} className="btn-ghost py-1.5 px-3 text-[12px]"><Plus size={14} /> Add Photo</button>
+            </div>
+            <div className="space-y-3">
+              {galleryPhotos.map((p, i) => (
+                <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-ink">Photo {i + 1}</span>
+                    <button onClick={() => removeGalleryPhoto(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
+                  </div>
+                  <div className="grid grid-cols-[1fr_140px] gap-3 mb-3">
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Caption</label>
+                      <input className="field-input text-[13px]" placeholder="Guangzhou Warehouse" value={p.caption} onChange={(e) => updateGalleryPhoto(i, "caption", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Category</label>
+                      <select className="field-input text-[13px]" value={p.category} onChange={(e) => updateGalleryPhoto(i, "category", e.target.value)}>
+                        {CATEGORY_OPTIONS.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Photo</label>
+                    <div className="flex gap-2 items-start">
+                      <input className="field-input text-[13px] flex-1" placeholder="Paste image URL or upload" value={p.url}
+                        onChange={(e) => updateGalleryPhoto(i, "url", e.target.value)} />
+                      <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          const url = await uploadImageFile(e.target.files[0]);
+                          if (url) updateGalleryPhoto(i, "url", url);
+                        }} />
+                        Upload
+                      </label>
+                    </div>
+                    {p.url && (
+                      <div className="mt-2 w-28 h-28 rounded-lg overflow-hidden border border-gray-line">
+                        <img src={p.url} alt={p.caption} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ GET A QUOTE FORM SECTION ═══ */}
+      {activeGroup === "quote_form" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Get a Quote Form</h2>
+          <div>
+            <label className="field-label">Title</label>
+            <input className="field-input" value={getVal("quote_title")} onChange={(e) => updateItem("quote_title", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Subtitle</label>
+            <input className="field-input" value={getVal("quote_subtitle")} onChange={(e) => updateItem("quote_subtitle", e.target.value)} />
+          </div>
+          <p className="text-[13px] text-gray-label">Submitted quote requests can be viewed and managed from the <span className="font-semibold text-brand-ink">Quotes</span> page in the sidebar.</p>
+        </div>
+      )}
+
+      {/* ═══ PARTNERS SECTION ═══ */}
+      {activeGroup === "partners" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">We Are Working With — Partners</h2>
+          <div>
+            <label className="field-label">Section Title</label>
+            <input className="field-input" value={getVal("partners_title")} onChange={(e) => updateItem("partners_title", e.target.value)} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="field-label mb-0">Partner Companies</label>
+              <button onClick={addPartner} className="btn-ghost py-1.5 px-3 text-[12px]"><Plus size={14} /> Add Partner</button>
+            </div>
+            <div className="space-y-3">
+              {partners.map((p, i) => (
+                <div key={i} className="border border-gray-line rounded-xl p-4 bg-brand-mist">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-ink">Partner {i + 1}</span>
+                    <button onClick={() => removePartner(i)} className="text-danger hover:text-danger/70 cursor-pointer"><Trash2 size={16} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Company Name</label>
+                      <input className="field-input text-[13px]" value={p.name} onChange={(e) => updatePartner(i, "name", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-label font-semibold mb-1 block">Website Link (optional)</label>
+                      <input className="field-input text-[13px]" placeholder="https://example.com" value={p.link} onChange={(e) => updatePartner(i, "link", e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-label font-semibold mb-1 block">Logo</label>
+                    <div className="flex gap-2 items-start">
+                      <input className="field-input text-[13px] flex-1" placeholder="Paste logo URL or upload" value={p.logo}
+                        onChange={(e) => updatePartner(i, "logo", e.target.value)} />
+                      <label className="btn-blue cursor-pointer shrink-0 py-1.5 px-3 text-[12px]">
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          if (!e.target.files?.[0]) return;
+                          const url = await uploadImageFile(e.target.files[0]);
+                          if (url) updatePartner(i, "logo", url);
+                        }} />
+                        Upload
+                      </label>
+                    </div>
+                    {p.logo && (
+                      <div className="mt-2 w-20 h-20 rounded-lg border border-gray-line overflow-hidden bg-white p-2">
+                        <img src={p.logo} alt={p.name} className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ SOCIAL LINKS SECTION ═══ */}
+      {activeGroup === "social" && (
+        <div className="card p-6 space-y-5">
+          <h2 className="text-lg font-display text-brand-ink">Social Links — Floating Buttons</h2>
+          <div>
+            <label className="field-label">WhatsApp Number (with country code, digits only)</label>
+            <input className="field-input" placeholder="8801995645200" value={getVal("whatsapp_number")} onChange={(e) => updateItem("whatsapp_number", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Facebook Page URL</label>
+            <input className="field-input" placeholder="https://facebook.com/aminscargo" value={getVal("facebook_url")} onChange={(e) => updateItem("facebook_url", e.target.value)} />
+          </div>
+        </div>
+      )}
+
       {activeGroup === "cta" && (
         <div className="card p-6 space-y-5">
           <h2 className="text-lg font-display text-brand-ink">Call to Action Section</h2>
@@ -518,6 +1001,15 @@ export default function SettingsPage() {
           <div>
             <label className="field-label">Office Address</label>
             <input className="field-input" value={getVal("contact_address")} onChange={(e) => updateItem("contact_address", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Office Hours</label>
+            <input className="field-input" placeholder="Sun-Thu: 10AM-6PM" value={getVal("contact_hours")} onChange={(e) => updateItem("contact_hours", e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Google Maps Embed URL</label>
+            <input className="field-input" placeholder="https://www.google.com/maps/embed?pb=..." value={getVal("contact_map_embed")} onChange={(e) => updateItem("contact_map_embed", e.target.value)} />
+            <p className="text-[11px] text-gray-label mt-1">In Google Maps: Share {"→"} Embed a map {"→"} copy the src URL from the iframe code.</p>
           </div>
           {/* Preview */}
           <div>
